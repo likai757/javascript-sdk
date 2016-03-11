@@ -1,21 +1,28 @@
-"use strict";
+/**
+ * 每位工程师都有保持代码优雅的义务
+ * Each engineer has a duty to keep the code elegant
+**/
 
-var Promise = require('../promise');
+'use strict';
 
-module.exports = function _ajax(method, url, data, success, error) {
+var AVPromise = require('../promise');
+var AVUtils = require('../utils');
+
+var ajax = function ajax(method, url, data, success, error) {
+  var AV = global.AV;
+
+  var promise = new AVPromise();
   var options = {
     success: success,
     error: error
   };
 
-  if (useXDomainRequest()) {
-    return ajaxIE8(method, url, data)._thenRunCallbacks(options);
-  }
+  var appId = AV.applicationId;
+  var appKey = AV.applicationKey;
+  var masterKey = AV.masterKey;
 
-  var promise = new Promise();
   var handled = false;
-
-  var xhr = new XMLHttpRequest();
+  var xhr = new global.XMLHttpRequest();
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       if (handled) {
@@ -24,7 +31,7 @@ module.exports = function _ajax(method, url, data, success, error) {
       handled = true;
 
       if (xhr.status >= 200 && xhr.status < 300) {
-        var response;
+        var response = void 0;
         try {
           response = JSON.parse(xhr.responseText);
         } catch (e) {
@@ -41,49 +48,19 @@ module.exports = function _ajax(method, url, data, success, error) {
     }
   };
   xhr.open(method, url, true);
-  xhr.setRequestHeader("Content-Type", "text/plain"); // avoid pre-flight.
+  xhr.setRequestHeader('X-LC-Id', appId);
+
+  var signature = void 0;
+  if (masterKey) {
+    signature = AVUtils.sign(masterKey, true);
+  } else {
+    signature = AVUtils.sign(appKey);
+  }
+
+  xhr.setRequestHeader('X-LC-Sign', signature);
+  xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
   xhr.send(data);
   return promise._thenRunCallbacks(options);
 };
 
-function useXDomainRequest() {
-  if (typeof XDomainRequest !== "undefined") {
-    // We're in IE 8+.
-    if ('withCredentials' in new XMLHttpRequest()) {
-      // We're in IE 10+.
-      return false;
-    }
-    return true;
-  }
-  return false;
-}
-
-function ajaxIE8(method, url, data) {
-  var promise = new Promise();
-  var xdr = new XDomainRequest();
-  xdr.onload = function () {
-    var response;
-    try {
-      response = JSON.parse(xdr.responseText);
-    } catch (e) {
-      promise.reject(e);
-    }
-    if (response) {
-      promise.resolve(response);
-    }
-  };
-  xdr.onerror = xdr.ontimeout = function () {
-    // Let's fake a real error message.
-    var fakeResponse = {
-      responseText: JSON.stringify({
-        code: AV.Error.X_DOMAIN_REQUEST,
-        error: "IE's XDomainRequest does not supply error info."
-      })
-    };
-    promise.reject(xdr);
-  };
-  xdr.onprogress = function () {};
-  xdr.open(method, url);
-  xdr.send(data);
-  return promise;
-}
+module.exports = ajax;

@@ -1,3 +1,8 @@
+/**
+ * 每位工程师都有保持代码优雅的义务
+ * Each engineer has a duty to keep the code elegant
+**/
+
 'use strict';
 
 module.exports = function upload(file, AV, saveOptions) {
@@ -55,7 +60,7 @@ module.exports = function upload(file, AV, saveOptions) {
         }
       }
     };
-    xhr.open('POST', 'http://upload.qiniu.com', true);
+    xhr.open('POST', 'https://up.qbox.me', true);
     xhr.send(data);
 
     return promise;
