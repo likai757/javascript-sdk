@@ -148,7 +148,5 @@ gulp.task('upload', ['compress-scripts'], function(cb) {
 gulp.task('release', [
   'browserify',
   'uglify',
-  'compress-scripts',
-  'docs',
-  'compress-docs'
+  'compress-scripts'
 ]);
